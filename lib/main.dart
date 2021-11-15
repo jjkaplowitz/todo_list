@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
-import 'todolistitem.dart';
 import 'todo.dart';
 import 'todoeditor.dart';
+import 'package:todo_list/todo.dart';
+import 'dart:math';
+
+List<ToDo> inProgressTodos = [];
+List<ToDo> completedTodos = [];
 
 class ToDoList extends StatefulWidget {
-  const ToDoList({required this.todos, Key? key}) : super(key: key);
+  ToDoList({this.todos, Key? key}) : super(key: key);
 
-  final List<ToDo> todos;
-
-  // The framework calls createState the first time
-  // a widget appears at a given location in the tree.
-  // If the parent rebuilds and uses the same type of
-  // widget (with the same key), the framework re-uses
-  // the State object instead of creating a new State object.
+  var todos;
 
   @override
   _ToDoListState createState() => _ToDoListState();
@@ -20,35 +18,31 @@ class ToDoList extends StatefulWidget {
 
 class _ToDoListState extends State<ToDoList> {
   final _todoList = <ToDo>{};
-  int _counter = 0;
 
   void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(builder: (context) => const SecondRoute()),
-      // );
-      Navigator.push(
+    _awaitReturnValueFromSecondScreen(context);
+  }
+
+  void _awaitReturnValueFromSecondScreen(BuildContext context) async {
+    // start the SecondScreen and wait for it to finish with a result
+    final result = await Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const SecondRoute()),
-      );
+        MaterialPageRoute(
+          builder: (context) => const SecondRoute(),
+        ));
+
+    // after the SecondScreen result comes back update the Text widget with it
+    setState(() {
+      inProgressTodos.add(result);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My ToDo List'),
-      ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 10.0),
-        children: widget.todos.map((ToDo todo) {
+        children: widget.todos.map<Widget>((ToDo todo) {
           return ToDoListItem(
             todo: todo,
             // inList: _todoList.contains(todo),
@@ -67,23 +61,188 @@ class _ToDoListState extends State<ToDoList> {
 
 void main() {
   runApp(const MaterialApp(
-    title: 'Shopping App',
-    home: ToDoList(
-      todos: [
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-        ToDo(title: 'Get Chicken', description: 'Need more', date: 'tomorrow'),
-      ],
-    ),
+    home: ToDoTabBar(selectedTab: 0),
   ));
+}
+
+class ToDoTabBar extends StatelessWidget {
+  final int selectedTab;
+  const ToDoTabBar({required this.selectedTab, Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: DefaultTabController(
+        initialIndex: selectedTab,
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(
+            bottom: const TabBar(
+              tabs: [
+                Tab(
+                  text: 'In progress',
+                ),
+                Tab(
+                  text: 'Completed',
+                ),
+              ],
+            ),
+            title: Text(
+              'My ToDos',
+              style: TextStyle(
+                fontSize: 30,
+                fontStyle: FontStyle.italic,
+                foreground: Paint()
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = 1
+                  ..color = Colors.white,
+              ),
+            ),
+          ),
+          body: TabBarView(
+            children: [
+              ToDoList(
+                todos: inProgressTodos,
+              ),
+              ToDoList(
+                todos: completedTodos,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+typedef ListChangedCallback = Function(ToDo todo, bool inList);
+
+class ToDoListItem extends StatelessWidget {
+  const ToDoListItem({
+    Key? key,
+    required this.todo,
+  }) : super(key: key);
+
+  final ToDo todo;
+
+  Color _getColor(BuildContext context, ToDo todo) {
+    if (completedTodos.contains(todo)) {
+      return Colors.black54;
+    } else {
+      return Colors.primaries[Random().nextInt(Colors.primaries.length)];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            flex: 1,
+            child: CircleAvatar(
+              backgroundColor: _getColor(context, todo),
+              child: Text(todo.title[0]),
+            ),
+          ),
+          Expanded(
+            flex: 4,
+            child: _ToDoDescription(
+              todo: todo,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToDoDescription extends StatelessWidget {
+  const _ToDoDescription({
+    Key? key,
+    required this.todo,
+  }) : super(key: key);
+
+  final ToDo todo;
+
+  TextStyle? _getTextStyleTitle(BuildContext context, ToDo todo) {
+    if (!completedTodos.contains(todo)) {
+      return TextStyle(
+        fontSize: 20,
+        foreground: Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = Colors.primaries[Random().nextInt(Colors.primaries.length)],
+      );
+    }
+
+    return const TextStyle(
+        color: Colors.black54, decoration: TextDecoration.lineThrough);
+  }
+
+  TextStyle? _getTextStyleDescription(BuildContext context, ToDo todo) {
+    if (!completedTodos.contains(todo)) {
+      return const TextStyle(
+        fontSize: 15,
+        fontStyle: FontStyle.italic,
+      );
+    }
+
+    return const TextStyle(
+        color: Colors.black54, decoration: TextDecoration.lineThrough);
+  }
+
+  TextStyle? _getTextStyleDate(BuildContext context, ToDo todo) {
+    if (!completedTodos.contains(todo)) {
+      return const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+      );
+    }
+
+    return const TextStyle(
+        color: Colors.black54, decoration: TextDecoration.lineThrough);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      child: InkWell(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(todo.title, style: _getTextStyleTitle(context, todo)),
+            const Padding(padding: EdgeInsets.symmetric(vertical: 1.0)),
+            Text(
+              todo.description,
+              style: _getTextStyleDescription(context, todo),
+            ),
+            const Padding(padding: EdgeInsets.symmetric(vertical: 1.0)),
+            Text(todo.date, style: _getTextStyleDate(context, todo)),
+          ],
+        ),
+        onTap: () {
+          if (completedTodos.contains(todo)) {
+            inProgressTodos.add(todo);
+            completedTodos.remove(todo);
+
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const ToDoTabBar(selectedTab: 0)));
+          } else if (inProgressTodos.contains(todo)) {
+            completedTodos.add(todo);
+            inProgressTodos.remove(todo);
+
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const ToDoTabBar(selectedTab: 1)));
+          }
+        },
+      ),
+    );
+  }
 }

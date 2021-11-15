@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:todo_list/main.dart';
+import 'package:todo_list/todo.dart';
 
 class SecondRoute extends StatelessWidget {
   const SecondRoute({Key? key}) : super(key: key);
@@ -35,6 +37,9 @@ class ToDoFormState extends State<ToDoForm> {
   // Note: This is a GlobalKey<FormState>,
   // not a GlobalKey<MyCustomFormState>.
   final _formKey = GlobalKey<FormState>();
+  TextEditingController titleNameController = TextEditingController();
+  TextEditingController descriptionNameController = TextEditingController();
+  TextEditingController dateNameController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +50,7 @@ class ToDoFormState extends State<ToDoForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextFormField(
+            controller: titleNameController,
             // The validator receives the text that the user has entered.
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -57,6 +63,7 @@ class ToDoFormState extends State<ToDoForm> {
             ),
           ),
           TextFormField(
+            controller: descriptionNameController,
             // The validator receives the text that the user has entered.
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -69,6 +76,7 @@ class ToDoFormState extends State<ToDoForm> {
             ),
           ),
           TextFormField(
+            controller: dateNameController,
             // The validator receives the text that the user has entered.
             validator: (value) {
               if (value == null || value.isEmpty) {
@@ -92,6 +100,12 @@ class ToDoFormState extends State<ToDoForm> {
                     const SnackBar(content: Text('Processing Data')),
                   );
                 }
+                Navigator.pop(
+                    context,
+                    ToDo(
+                        title: titleNameController.text.toString(),
+                        description: descriptionNameController.text.toString(),
+                        date: dateNameController.text.toString()));
               },
               child: const Text('Save to reminders'),
             ),
