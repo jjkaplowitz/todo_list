@@ -10,6 +10,7 @@ List<ToDo> completedTodos = [];
 class ToDoList extends StatefulWidget {
   ToDoList({this.todos, Key? key}) : super(key: key);
 
+  // ignore: prefer_typing_uninitialized_variables
   var todos;
 
   @override
@@ -35,6 +36,20 @@ class _ToDoListState extends State<ToDoList> {
     setState(() {
       inProgressTodos.add(result);
     });
+  }
+
+  void _awaitReturnValueFromSecondScreenUpdate(BuildContext context) async {
+    // start the SecondScreen and wait for it to finish with a result
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const SecondRoute(),
+        ));
+
+    // after the SecondScreen result comes back update the Text widget with it
+    //setState(() {
+    inProgressTodos.add(result);
+    //});
   }
 
   @override
@@ -241,6 +256,33 @@ class _ToDoDescription extends StatelessWidget {
                 MaterialPageRoute(
                     builder: (context) => const ToDoTabBar(selectedTab: 1)));
           }
+        },
+        onLongPress: () {
+          if (completedTodos.contains(todo)) {
+            completedTodos.remove(todo);
+          }
+          if (inProgressTodos.contains(todo)) {
+            inProgressTodos.remove(todo);
+          }
+
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const ToDoTabBar(selectedTab: 0)));
+        },
+        onDoubleTap: () {
+          final snackBar = SnackBar(
+            content: const Text("Pressed"),
+            action: SnackBarAction(
+              label: "Can't undo",
+              onPressed: () {},
+            ),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+
+          _ToDoListState d = new _ToDoListState();
+          inProgressTodos.remove(todo);
+          d._awaitReturnValueFromSecondScreenUpdate(context);
         },
       ),
     );
