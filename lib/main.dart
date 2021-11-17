@@ -3,9 +3,12 @@ import 'todo.dart';
 import 'todoeditor.dart';
 import 'package:todo_list/todo.dart';
 import 'dart:math';
+import 'readandwrite.dart';
 
 List<ToDo> inProgressTodos = [];
 List<ToDo> completedTodos = [];
+late _ToDoListState state;
+ToDosStorage storage = ToDosStorage();
 
 class ToDoList extends StatefulWidget {
   ToDoList({this.todos, Key? key}) : super(key: key);
@@ -29,7 +32,8 @@ class _ToDoListState extends State<ToDoList> {
     final result = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const SecondRoute(),
+          builder: (context) => const SecondRoute(
+              todo: ToDo(title: "", description: "", date: "")),
         ));
 
     // after the SecondScreen result comes back update the Text widget with it
@@ -38,18 +42,29 @@ class _ToDoListState extends State<ToDoList> {
     });
   }
 
-  void _awaitReturnValueFromSecondScreenUpdate(BuildContext context) async {
+  void _awaitReturnValueFromSecondScreenUpdate(
+      BuildContext context, ToDo todo) async {
     // start the SecondScreen and wait for it to finish with a result
     final result = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const SecondRoute(),
+          builder: (context) => SecondRoute(
+            todo: todo,
+          ),
         ));
 
     // after the SecondScreen result comes back update the Text widget with it
-    //setState(() {
+    // setState(() {
     inProgressTodos.add(result);
-    //});
+    // });
+
+    storage.writeToDos('inProgress', inProgressTodos);
+    storage.writeToDos('completed', completedTodos);
+
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => const ToDoTabBar(selectedTab: 0)));
   }
 
   @override
@@ -74,7 +89,15 @@ class _ToDoListState extends State<ToDoList> {
   }
 }
 
-void main() {
+Future<void> main() async {
+  inProgressTodos = await storage.readToDos('inProgress');
+  completedTodos = await storage.readToDos('completed');
+
+  for (var todo in completedTodos) {
+    print(todo.title);
+  }
+  print("here");
+
   runApp(const MaterialApp(
     home: ToDoTabBar(selectedTab: 0),
   ));
@@ -243,6 +266,9 @@ class _ToDoDescription extends StatelessWidget {
             inProgressTodos.add(todo);
             completedTodos.remove(todo);
 
+            storage.writeToDos('inProgress', inProgressTodos);
+            storage.writeToDos('completed', completedTodos);
+
             Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -265,14 +291,46 @@ class _ToDoDescription extends StatelessWidget {
             inProgressTodos.remove(todo);
           }
 
+          storage.writeToDos('inProgress', inProgressTodos);
+          storage.writeToDos('completed', completedTodos);
+
+          // Navigator.push(
+          //     context,
+          //     MaterialPageRoute(
+          //         builder: (context) => const ToDoTabBar(selectedTab: 0))
+          //         );
+
           Navigator.push(
               context,
-              MaterialPageRoute(
-                  builder: (context) => const ToDoTabBar(selectedTab: 0)));
+              PageRouteBuilder(
+                  opaque: false,
+                  pageBuilder: (BuildContext context, _, __) {
+                    return const ToDoTabBar(selectedTab: 0);
+                  },
+                  transitionsBuilder:
+                      (___, Animation<double> animation, ____, Widget child) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: RotationTransition(
+                        turns: Tween<double>(begin: 0.5, end: 1.0)
+                            .animate(animation),
+                        child: child,
+                      ),
+                    );
+                  }));
+
+          final snackBar = SnackBar(
+            content: const Text("Deleted"),
+            action: SnackBarAction(
+              label: "Can't undo",
+              onPressed: () {},
+            ),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
         },
         onDoubleTap: () {
           final snackBar = SnackBar(
-            content: const Text("Pressed"),
+            content: const Text("Edited"),
             action: SnackBarAction(
               label: "Can't undo",
               onPressed: () {},
@@ -280,9 +338,12 @@ class _ToDoDescription extends StatelessWidget {
           );
           ScaffoldMessenger.of(context).showSnackBar(snackBar);
 
-          _ToDoListState d = new _ToDoListState();
+          _ToDoListState d = _ToDoListState();
+          d._awaitReturnValueFromSecondScreenUpdate(context, todo);
           inProgressTodos.remove(todo);
-          d._awaitReturnValueFromSecondScreenUpdate(context);
+
+          storage.writeToDos('inProgress', inProgressTodos);
+          storage.writeToDos('completed', completedTodos);
         },
       ),
     );
