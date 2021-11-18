@@ -1,15 +1,52 @@
+/* MIDN Josh Kaplowitz + MIDN Sean Chen
+* ToDo List for iOS, Android and Web
+* Creates an interactive ToDo list that allows a user to add,
+* delete, edit and cross out todos. User can set a date for completion,
+* description and title.
+*/
+
+/// Imports
 import 'package:flutter/material.dart';
 import 'todo.dart';
 import 'todoeditor.dart';
 import 'package:todo_list/todo.dart';
 import 'dart:math';
-import 'readandwrite.dart';
 
+/// Keeps track of current and finished todos
 List<ToDo> inProgressTodos = [];
 List<ToDo> completedTodos = [];
 late _ToDoListState state;
-ToDosStorage storage = ToDosStorage();
 
+/// MAIN
+///
+/// Runs app starting on the first tab of the tab bar
+///
+///
+///
+///
+///
+///
+///
+///
+main() {
+  runApp(const MaterialApp(
+    home: ToDoTabBar(selectedTab: 0),
+  ));
+}
+
+///
+///
+///
+///
+///
+///
+///
+///
+///
+///
+
+/// ToDoList class
+/// Holds the list of todos and creates the changeable state
 class ToDoList extends StatefulWidget {
   ToDoList({this.todos, Key? key}) : super(key: key);
 
@@ -20,53 +57,58 @@ class ToDoList extends StatefulWidget {
   _ToDoListState createState() => _ToDoListState();
 }
 
+/// ToDoListState
+/// Refreshes the screen on change
 class _ToDoListState extends State<ToDoList> {
   final _todoList = <ToDo>{};
 
-  void _incrementCounter() {
+  /// Refresh screen after adding todo
+  void _refresh() {
     _awaitReturnValueFromSecondScreen(context);
   }
 
+  /// Gets value from second screen
   void _awaitReturnValueFromSecondScreen(BuildContext context) async {
     // start the SecondScreen and wait for it to finish with a result
     final result = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => const SecondRoute(
+          builder: (context) => const ToDoEditor(
               todo: ToDo(title: "", description: "", date: "")),
         ));
 
     // after the SecondScreen result comes back update the Text widget with it
     setState(() {
-      inProgressTodos.add(result);
+      if (result != null) inProgressTodos.add(result);
     });
   }
 
+  /// Changes value for editing a todo and refreshes screen
   void _awaitReturnValueFromSecondScreenUpdate(
       BuildContext context, ToDo todo) async {
-    // start the SecondScreen and wait for it to finish with a result
+    /// Start the SecondScreen and wait for it to finish with a result
     final result = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => SecondRoute(
+          builder: (context) => ToDoEditor(
             todo: todo,
           ),
         ));
 
-    // after the SecondScreen result comes back update the Text widget with it
-    // setState(() {
-    inProgressTodos.add(result);
-    // });
+    if (result != null) {
+      inProgressTodos.add(result);
+      inProgressTodos.remove(todo);
+    }
 
-    storage.writeToDos('inProgress', inProgressTodos);
-    storage.writeToDos('completed', completedTodos);
-
+    /// Refresh screen
     Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) => const ToDoTabBar(selectedTab: 0)));
   }
 
+  /// Builds the UI widget for main list
+  /// Holds all the todolistitems and floating action button
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,38 +117,27 @@ class _ToDoListState extends State<ToDoList> {
         children: widget.todos.map<Widget>((ToDo todo) {
           return ToDoListItem(
             todo: todo,
-            // inList: _todoList.contains(todo),
-            // onListChanged: _handleToDoChanged,
           );
         }).toList(),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
+        onPressed: _refresh,
+        tooltip: 'Refresh',
         child: const Icon(Icons.add),
       ),
     );
   }
 }
 
-Future<void> main() async {
-  inProgressTodos = await storage.readToDos('inProgress');
-  completedTodos = await storage.readToDos('completed');
-
-  for (var todo in completedTodos) {
-    print(todo.title);
-  }
-  print("here");
-
-  runApp(const MaterialApp(
-    home: ToDoTabBar(selectedTab: 0),
-  ));
-}
-
+/// ToDoBar class
+/// Creates the main tab bar UI with two tabs
+/// Tab 1: In progress todos
+/// Tab 2: Completed todos
 class ToDoTabBar extends StatelessWidget {
   final int selectedTab;
   const ToDoTabBar({required this.selectedTab, Key? key}) : super(key: key);
 
+  /// Builds widget UI for todotabbar
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -153,16 +184,19 @@ class ToDoTabBar extends StatelessWidget {
   }
 }
 
-typedef ListChangedCallback = Function(ToDo todo, bool inList);
-
+/// ToDoListItem Class
+/// Creates the custom list displayed in the listview
+/// Stores a todo with an avatar photo that holds the first letter of the
+/// todo title.
 class ToDoListItem extends StatelessWidget {
   const ToDoListItem({
     Key? key,
     required this.todo,
   }) : super(key: key);
-
   final ToDo todo;
 
+  /// Will change the color to a random one or black it out
+  /// if the todo is completed
   Color _getColor(BuildContext context, ToDo todo) {
     if (completedTodos.contains(todo)) {
       return Colors.black54;
@@ -171,6 +205,7 @@ class ToDoListItem extends StatelessWidget {
     }
   }
 
+  /// Creates UI widget for the todolistitem
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -197,6 +232,8 @@ class ToDoListItem extends StatelessWidget {
   }
 }
 
+/// Private description class used to display the description
+/// of the todos
 class _ToDoDescription extends StatelessWidget {
   const _ToDoDescription({
     Key? key,
@@ -205,6 +242,7 @@ class _ToDoDescription extends StatelessWidget {
 
   final ToDo todo;
 
+  /// Custom textstyle for the todo title
   TextStyle? _getTextStyleTitle(BuildContext context, ToDo todo) {
     if (!completedTodos.contains(todo)) {
       return TextStyle(
@@ -215,11 +253,11 @@ class _ToDoDescription extends StatelessWidget {
           ..color = Colors.primaries[Random().nextInt(Colors.primaries.length)],
       );
     }
-
     return const TextStyle(
         color: Colors.black54, decoration: TextDecoration.lineThrough);
   }
 
+  /// Custom textstyle for the todo description
   TextStyle? _getTextStyleDescription(BuildContext context, ToDo todo) {
     if (!completedTodos.contains(todo)) {
       return const TextStyle(
@@ -227,11 +265,11 @@ class _ToDoDescription extends StatelessWidget {
         fontStyle: FontStyle.italic,
       );
     }
-
     return const TextStyle(
         color: Colors.black54, decoration: TextDecoration.lineThrough);
   }
 
+  /// Custom textstyle for the todo date
   TextStyle? _getTextStyleDate(BuildContext context, ToDo todo) {
     if (!completedTodos.contains(todo)) {
       return const TextStyle(
@@ -239,11 +277,12 @@ class _ToDoDescription extends StatelessWidget {
         fontWeight: FontWeight.bold,
       );
     }
-
     return const TextStyle(
         color: Colors.black54, decoration: TextDecoration.lineThrough);
   }
 
+  /// Creates UI widget for the todo
+  /// Includes the title, description and date
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -266,9 +305,6 @@ class _ToDoDescription extends StatelessWidget {
             inProgressTodos.add(todo);
             completedTodos.remove(todo);
 
-            storage.writeToDos('inProgress', inProgressTodos);
-            storage.writeToDos('completed', completedTodos);
-
             Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -283,6 +319,8 @@ class _ToDoDescription extends StatelessWidget {
                     builder: (context) => const ToDoTabBar(selectedTab: 1)));
           }
         },
+
+        /// Will delete the todo on longpress
         onLongPress: () {
           if (completedTodos.contains(todo)) {
             completedTodos.remove(todo);
@@ -291,15 +329,7 @@ class _ToDoDescription extends StatelessWidget {
             inProgressTodos.remove(todo);
           }
 
-          storage.writeToDos('inProgress', inProgressTodos);
-          storage.writeToDos('completed', completedTodos);
-
-          // Navigator.push(
-          //     context,
-          //     MaterialPageRoute(
-          //         builder: (context) => const ToDoTabBar(selectedTab: 0))
-          //         );
-
+          /// Refresh screen
           Navigator.push(
               context,
               PageRouteBuilder(
@@ -319,31 +349,30 @@ class _ToDoDescription extends StatelessWidget {
                     );
                   }));
 
+          /// Notify user on delete
           final snackBar = SnackBar(
             content: const Text("Deleted"),
             action: SnackBarAction(
-              label: "Can't undo",
+              label: "Done",
               onPressed: () {},
             ),
           );
           ScaffoldMessenger.of(context).showSnackBar(snackBar);
         },
+
+        /// Double tap will allow edit
         onDoubleTap: () {
+          /// Notify user on edit
           final snackBar = SnackBar(
             content: const Text("Edited"),
             action: SnackBarAction(
-              label: "Can't undo",
+              label: "Done",
               onPressed: () {},
             ),
           );
           ScaffoldMessenger.of(context).showSnackBar(snackBar);
-
           _ToDoListState d = _ToDoListState();
           d._awaitReturnValueFromSecondScreenUpdate(context, todo);
-          inProgressTodos.remove(todo);
-
-          storage.writeToDos('inProgress', inProgressTodos);
-          storage.writeToDos('completed', completedTodos);
         },
       ),
     );

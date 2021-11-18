@@ -1,57 +1,83 @@
+/* MIDN Josh Kaplowitz + MIDN Sean Chen
+* ToDo editor allows user to create and edit
+* todos.
+*/
+
 import 'package:flutter/material.dart';
-import 'package:todo_list/main.dart';
 import 'package:todo_list/todo.dart';
 
-class SecondRoute extends StatelessWidget {
-  const SecondRoute({Key? key}) : super(key: key);
+/// ToDoEditor class
+/// Creates the form to allow user to add or edit a todo
+class ToDoEditor extends StatelessWidget {
+  const ToDoEditor({Key? key, required this.todo}) : super(key: key);
+  final ToDo todo;
 
+  /// Builds main widget UI for form
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Add a ToDo"),
       ),
-      body: const Center(
-        child: ToDoForm(),
+      body: Center(
+        child: ToDoForm(
+          todo: todo,
+        ),
       ),
     );
   }
 }
 
-// Create a Form widget.
+/// ToDoForm class
+/// Creates the form widget that will update the main listview in the todos
 class ToDoForm extends StatefulWidget {
-  const ToDoForm({Key? key}) : super(key: key);
+  const ToDoForm({Key? key, required this.todo}) : super(key: key);
+  final ToDo todo;
 
+  /// Text controllers push data back to main list view
   @override
+  // ignore: no_logic_in_create_state
   ToDoFormState createState() {
-    return ToDoFormState();
+    TextEditingController titleNameController =
+        TextEditingController(text: todo.title);
+    TextEditingController descriptionNameController =
+        TextEditingController(text: todo.description);
+    TextEditingController dateNameController =
+        TextEditingController(text: todo.date);
+
+    return ToDoFormState(
+        todo: todo,
+        title: titleNameController,
+        description: descriptionNameController,
+        date: dateNameController);
   }
 }
 
-// Create a corresponding State class.
-// This class holds data related to the form.
+/// ToDoFormState class
+/// Creates the basic form state for the todoeditor
 class ToDoFormState extends State<ToDoForm> {
-  // Create a global key that uniquely identifies the Form widget
-  // and allows validation of the form.
-  //
-  // Note: This is a GlobalKey<FormState>,
-  // not a GlobalKey<MyCustomFormState>.
   final _formKey = GlobalKey<FormState>();
-  TextEditingController titleNameController = TextEditingController();
-  TextEditingController descriptionNameController = TextEditingController();
-  TextEditingController dateNameController = TextEditingController();
+  final ToDo todo;
+  final TextEditingController title, description, date;
+  ToDoFormState(
+      {required this.todo,
+      required this.title,
+      required this.description,
+      required this.date});
 
+  /// This is main UI widget for the form
+  /// Includes the input textfield for the title, description and date
   @override
   Widget build(BuildContext context) {
-    // Build a Form widget using the _formKey created above.
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          /// Textfield for the title
+          /// Data required
           TextFormField(
-            controller: titleNameController,
-            // The validator receives the text that the user has entered.
+            controller: title,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter a title';
@@ -62,9 +88,11 @@ class ToDoFormState extends State<ToDoForm> {
               hintText: 'Title',
             ),
           ),
+
+          /// Textfield for the description
+          /// Data required
           TextFormField(
-            controller: descriptionNameController,
-            // The validator receives the text that the user has entered.
+            controller: description,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter a description';
@@ -75,9 +103,11 @@ class ToDoFormState extends State<ToDoForm> {
               hintText: 'Description',
             ),
           ),
+
+          /// Textfield for the date
+          /// Data required
           TextFormField(
-            controller: dateNameController,
-            // The validator receives the text that the user has entered.
+            controller: date,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter a due date';
@@ -91,23 +121,19 @@ class ToDoFormState extends State<ToDoForm> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             child: ElevatedButton(
+              /// When button pressed, return to main list and push data back
+              /// If no data inputted then a warning will be displayed
               onPressed: () {
-                // Validate returns true if the form is valid, or false otherwise.
                 if (_formKey.currentState!.validate()) {
-                  // If the form is valid, display a snackbar. In the real world,
-                  // you'd often call a server or save the information in a database.
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Processing Data')),
-                  );
+                  Navigator.pop(
+                      context,
+                      ToDo(
+                          title: title.text.toString(),
+                          description: description.text.toString(),
+                          date: date.text.toString()));
                 }
-                Navigator.pop(
-                    context,
-                    ToDo(
-                        title: titleNameController.text.toString(),
-                        description: descriptionNameController.text.toString(),
-                        date: dateNameController.text.toString()));
               },
-              child: const Text('Save to reminders'),
+              child: const Center(child: Text('Save to todos')),
             ),
           ),
         ],
